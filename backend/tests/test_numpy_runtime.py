@@ -1,0 +1,154 @@
+import unittest
+
+import numpy as np
+
+from app.runtime import NumPyRuntime
+
+
+class NumPyRuntimeTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.runtime = NumPyRuntime()
+
+    def test_linear_projects_last_dimension_and_adds_bias(self) -> None:
+        inputs = np.array(
+            [[[1.0, 2.0], [3.0, 4.0]]],
+            dtype=np.float32,
+        )
+        weight = np.array(
+            [[1.0, 0.0, 1.0], [0.0, 1.0, 1.0]],
+            dtype=np.float32,
+        )
+        bias = np.array([0.5, -0.5, 1.0], dtype=np.float32)
+
+        output = self.runtime.linear(inputs, weight, bias)
+
+        expected = np.array(
+            [[[1.5, 1.5, 4.0], [3.5, 3.5, 8.0]]],
+            dtype=np.float32,
+        )
+        np.testing.assert_allclose(output, expected)
+        self.assertEqual(output.shape, (1, 2, 3))
+        self.assertEqual(output.dtype, np.float32)
+
+    def test_linear_rejects_incompatible_dimensions(self) -> None:
+        with self.assertRaisesRegex(ValueError, "input dimension"):
+            self.runtime.linear(np.ones((1, 2, 3)), np.ones((4, 2)))
+
+        with self.assertRaisesRegex(ValueError, "bias"):
+            self.runtime.linear(
+                np.ones((1, 2, 3)),
+                np.ones((3, 2)),
+                np.ones(3),
+            )
+
+    def test_batched_matmul(self) -> None:
+        left = np.arange(12, dtype=np.float32).reshape(1, 2, 2, 3)
+        right = np.arange(24, dtype=np.float32).reshape(1, 2, 3, 4)
+
+        output = self.runtime.matmul(left, right)
+
+        np.testing.assert_allclose(output, np.matmul(left, right))
+        self.assertEqual(output.shape, (1, 2, 2, 4))
+
+    def test_reshape_and_transpose_for_attention_heads(self) -> None:
+        tensor = np.arange(24, dtype=np.float32).reshape(1, 3, 8)
+
+        split = self.runtime.reshape(tensor, (1, 3, 2, 4))
+        transposed = self.runtime.transpose(split, (0, 2, 1, 3))
+
+        self.assertEqual(transposed.shape, (1, 2, 3, 4))
+        np.testing.assert_array_equal(transposed[0, 1, 0], [4, 5, 6, 7])
+
+    def test_repeat_kv_maps_kv_heads_to_query_heads(self) -> None:
+        cache = np.array(
+            [[[[1.0, 2.0]], [[3.0, 4.0]]]],
+            dtype=np.float32,
+        )
+
+        repeated = self.runtime.repeat_kv(cache, repeats=2)
+
+        self.assertEqual(repeated.shape, (1, 4, 1, 2))
+        np.testing.assert_array_equal(repeated[:, 0], cache[:, 0])
+        np.testing.assert_array_equal(repeated[:, 1], cache[:, 0])
+        np.testing.assert_array_equal(repeated[:, 2], cache[:, 1])
+        np.testing.assert_array_equal(repeated[:, 3], cache[:, 1])
+
+    def test_rope_uses_absolute_positions_and_preserves_norm(self) -> None:
+        tensor = np.array(
+            [[[[1.0, 2.0, 3.0, 4.0], [1.0, 2.0, 3.0, 4.0]]]],
+            dtype=np.float32,
+        )
+
+        rotated = self.runtime.rope(tensor, positions=[0, 1])
+
+        np.testing.assert_array_equal(rotated[..., 0, :], tensor[..., 0, :])
+        self.assertFalse(np.array_equal(rotated[..., 1, :], tensor[..., 1, :]))
+        np.testing.assert_allclose(
+            np.linalg.norm(rotated, axis=-1),
+            np.linalg.norm(tensor, axis=-1),
+            atol=1e-6,
+        )
+
+    def test_scale_divides_attention_scores(self) -> None:
+        scores = np.array([[2.0, 4.0]], dtype=np.float32)
+
+        scaled = self.runtime.scale(scores, divisor=2.0)
+
+        np.testing.assert_allclose(scaled, [[1.0, 2.0]])
+        with self.assertRaisesRegex(ValueError, "must not be zero"):
+            self.runtime.scale(scores, divisor=0)
+
+    def test_causal_mask_hides_future_positions(self) -> None:
+        scores = np.zeros((1, 2, 3, 3), dtype=np.float32)
+
+        masked = self.runtime.causal_mask(scores)
+
+        expected_head = np.array(
+            [
+                [0.0, -np.inf, -np.inf],
+                [0.0, 0.0, -np.inf],
+                [0.0, 0.0, 0.0],
+            ],
+            dtype=np.float32,
+        )
+        np.testing.assert_array_equal(masked[0, 0], expected_head)
+        np.testing.assert_array_equal(masked[0, 1], expected_head)
+
+    def test_causal_mask_aligns_short_queries_to_cache_tail(self) -> None:
+        scores = np.zeros((1, 2, 1, 4), dtype=np.float32)
+
+        masked = self.runtime.causal_mask(scores)
+
+        np.testing.assert_array_equal(masked, scores)
+
+    def test_softmax_is_stable_and_rows_sum_to_one(self) -> None:
+        values = np.array(
+            [[1000.0, 1000.0], [1.0, 2.0]],
+            dtype=np.float32,
+        )
+
+        probabilities = self.runtime.softmax(values)
+
+        np.testing.assert_allclose(
+            probabilities.sum(axis=-1),
+            np.ones(2, dtype=np.float32),
+        )
+        np.testing.assert_allclose(probabilities[0], [0.5, 0.5])
+        self.assertTrue(np.isfinite(probabilities).all())
+
+    def test_masked_softmax_assigns_zero_to_future_positions(self) -> None:
+        scores = np.ones((3, 3), dtype=np.float32)
+
+        probabilities = self.runtime.softmax(
+            self.runtime.causal_mask(scores)
+        )
+
+        np.testing.assert_allclose(probabilities.sum(axis=-1), 1.0)
+        np.testing.assert_array_equal(
+            probabilities[np.triu_indices(3, k=1)],
+            np.zeros(3, dtype=np.float32),
+        )
+
+
+if __name__ == "__main__":
+    unittest.main()
