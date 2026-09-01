@@ -364,7 +364,9 @@ class PrimitiveExecutor:
     ) -> str:
         current = self.value(input_id)
         if existing is not None and existing_id is not None:
-            raise ValueError("Provide existing cache data or an existing tensor id, not both.")
+            raise ValueError(
+                "Provide existing cache data or an existing tensor id, not both."
+            )
         if existing_id is not None:
             existing = self.value(existing_id)
         previous_tokens = 0 if existing is None else int(np.asarray(existing).shape[-2])
@@ -677,8 +679,7 @@ class PrimitiveExecutor:
 
     def tensor_payload(self) -> dict[str, dict[str, Any]]:
         return {
-            tensor_id: tensor.to_dict()
-            for tensor_id, tensor in self.tensors.items()
+            tensor_id: tensor.to_dict() for tensor_id, tensor in self.tensors.items()
         }
 
     def _store_tensor(
@@ -716,8 +717,7 @@ class PrimitiveExecutor:
         output_array = np.asarray(output)
         self._store_tensor(output_id, output_name, output_array)
         input_shapes = [
-            list(self.graph.tensors[tensor_id].shape)
-            for tensor_id in input_ids
+            list(self.graph.tensors[tensor_id].shape) for tensor_id in input_ids
         ]
         node_attrs = {
             **(attrs or {}),

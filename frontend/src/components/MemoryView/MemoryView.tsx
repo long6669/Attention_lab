@@ -77,8 +77,7 @@ export function MemoryView({
       ? 1
       : selected.shape[selected.growth_axis];
   const headAxis = selected?.axes.indexOf("head") ?? -1;
-  const headCount =
-    selected && headAxis >= 0 ? selected.shape[headAxis] : 0;
+  const headCount = selected && headAxis >= 0 ? selected.shape[headAxis] : 0;
 
   useEffect(() => {
     const first = tensors[0];
@@ -393,16 +392,16 @@ function Overview({
               <Database size={16} />
               <div>
                 <strong>{tensor.name}</strong>
-                <span>{tensor.role} · {tensor.kind}</span>
+                <span>
+                  {tensor.role} · {tensor.kind}
+                </span>
               </div>
             </div>
             <code>[{tensor.shape.join(", ")}]</code>
             <span>{tensor.dtype}</span>
             <span>{tensor.numel.toLocaleString()} values</span>
             <span>{formatBytes(tensor.bytes)}</span>
-            <span>
-              grows on {tensor.growth_axis_name ?? "fixed state"}
-            </span>
+            <span>grows on {tensor.growth_axis_name ?? "fixed state"}</span>
           </article>
         ))}
       </div>
@@ -453,9 +452,11 @@ function BlockView({
             <span>
               {block.head_start !== null
                 ? `H${block.head_start}${block.head_end !== block.head_start + 1 ? `-${(block.head_end ?? 1) - 1}` : ""}`
-                : selected.growth_axis_name ?? "state"}
+                : (selected.growth_axis_name ?? "state")}
             </span>
-            <strong>{block.start}:{block.end}</strong>
+            <strong>
+              {block.start}:{block.end}
+            </strong>
             <small>|x| {formatMetric(block.mean_abs)}</small>
           </div>
         ))}

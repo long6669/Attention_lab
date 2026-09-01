@@ -1,10 +1,6 @@
 import type { Edge, Node } from "@xyflow/react";
 
-import type {
-  AttentionGraph,
-  GraphNode,
-  TensorSpec,
-} from "../types/attention";
+import type { AttentionGraph, GraphNode, TensorSpec } from "../types/attention";
 
 export type GraphNodeData = {
   graphNode: GraphNode;
@@ -64,8 +60,8 @@ export function graphToFlow(
         graphNode.op === "state_init" ||
         graphNode.op === "state_read" ||
         graphNode.op === "state_update"
-            ? "cache"
-            : SUPPORTED_OPS.has(graphNode.op)
+          ? "cache"
+          : SUPPORTED_OPS.has(graphNode.op)
             ? "operator"
             : "generic",
       position: { x: 0, y: 0 },

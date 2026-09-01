@@ -19,10 +19,10 @@ const ARCHITECTURE_LABELS: Record<AttentionArchitecture, string> = {
   mqa: "Multi-Query Attention",
   gqa: "Grouped-Query Attention",
   rope: "MHA with RoPE",
-  mla: "Multi-Head Latent Attention",
-  kda: "Kimi Delta Attention",
-  csa: "Compressed Sparse Attention",
-  hca: "Hierarchical Compressed Attention",
+  mla: "MLA Concept Model",
+  kda: "KDA Concept Model",
+  csa: "CSA Concept Model",
+  hca: "HCA Concept Model",
 };
 
 export default function App() {
@@ -123,15 +123,12 @@ export default function App() {
     try {
       const payload = await decodeOneToken(result.session_id);
       const memoryReadStep = payload.trace.findIndex(
-        (event) =>
-          event.op === "cache_read" || event.op === "state_read",
+        (event) => event.op === "cache_read" || event.op === "state_read",
       );
       setPreviousMemory(result.memory);
       setResult(payload);
       setCurrentStep(Math.max(memoryReadStep, 0));
-      setSelectedNodeId(
-        payload.trace[Math.max(memoryReadStep, 0)]?.node_id,
-      );
+      setSelectedNodeId(payload.trace[Math.max(memoryReadStep, 0)]?.node_id);
     } catch (decodeError) {
       setError(
         decodeError instanceof Error

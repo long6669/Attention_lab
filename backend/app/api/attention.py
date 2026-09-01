@@ -8,9 +8,9 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from app.architectures import (
-    MHAConfig,
     CompressedSparseAttention,
     KimiDeltaAttention,
+    MHAConfig,
     MultiHeadAttention,
     MultiHeadLatentAttention,
 )
@@ -18,6 +18,7 @@ from app.memory import infer_axes, json_values, slice_memory
 
 MAX_INPUT_TOKENS = 10
 MAX_DECODED_TOKENS = 11
+MAX_SESSIONS = 256
 
 router = APIRouter(prefix="/api", tags=["attention"])
 
@@ -108,6 +109,9 @@ def run_attention(text: str, architecture: str = "mha") -> dict[str, Any]:
     result = attention.prefill(tokens)
     session_id = uuid4().hex
     with _sessions_lock:
+        if len(_sessions) >= MAX_SESSIONS:
+            oldest_session_id = next(iter(_sessions))
+            del _sessions[oldest_session_id]
         _sessions[session_id] = AttentionSession(attention, result.state)
 
     payload = result.to_dict()

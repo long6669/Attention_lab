@@ -77,9 +77,7 @@ class GraphTest(unittest.TestCase):
 
     def test_rejects_unknown_tensor_reference(self) -> None:
         with self.assertRaisesRegex(ValueError, "unknown tensors"):
-            self.graph.add_node(
-                Node("bad", "linear", "Bad Node", inputs=["missing"])
-            )
+            self.graph.add_node(Node("bad", "linear", "Bad Node", inputs=["missing"]))
 
     def test_rejects_edge_with_invalid_data_flow(self) -> None:
         with self.assertRaisesRegex(ValueError, "not produced"):

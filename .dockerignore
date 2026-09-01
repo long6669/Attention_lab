@@ -1,0 +1,9 @@
+.git
+.github
+.venv
+**/__pycache__
+**/*.pyc
+frontend/dist
+frontend/node_modules
+frontend/*.tsbuildinfo
+.DS_Store

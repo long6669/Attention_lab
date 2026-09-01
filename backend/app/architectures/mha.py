@@ -527,7 +527,10 @@ class MultiHeadAttention:
         for name, cache in (("K", state.k_cache), ("V", state.v_cache)):
             if cache.ndim != 4:
                 raise ValueError(f"{name} cache must have four dimensions.")
-            if cache.shape[:2] != expected_prefix or cache.shape[-1:] != expected_suffix:
+            if (
+                cache.shape[:2] != expected_prefix
+                or cache.shape[-1:] != expected_suffix
+            ):
                 raise ValueError(f"{name} cache shape does not match MHA config.")
             if cache.shape[-2] != len(state.tokens):
                 raise ValueError(f"{name} cache length does not match tokens.")
@@ -541,9 +544,7 @@ class MultiHeadAttention:
         digest = hashlib.sha256(key).digest()
         token_seed = int.from_bytes(digest[:8], byteorder="big", signed=False)
         rng = np.random.default_rng(token_seed)
-        return rng.normal(0.0, 0.5, self.config.d_model).astype(
-            self.config.dtype
-        )
+        return rng.normal(0.0, 0.5, self.config.d_model).astype(self.config.dtype)
 
     def _projection_weights(self) -> dict[str, NDArray]:
         rng = np.random.default_rng(self.config.seed)

@@ -1,7 +1,6 @@
 import unittest
 
 import numpy as np
-
 from app.memory import MemorySpec, MemoryTensorSpec, slice_memory
 from app.ops import TensorValue
 

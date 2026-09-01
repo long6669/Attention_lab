@@ -1,0 +1,31 @@
+name: Feature request
+description: Propose a focused product or architecture improvement.
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Learning or engineering problem
+      description: What is difficult to understand or accomplish today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Describe the workflow and expected result.
+    validations:
+      required: true
+  - type: textarea
+    id: references
+    attributes:
+      label: References
+      description: Link papers, equations, or reference implementations.
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope check
+      options:
+        - label: This proposal preserves IR, runtime, trace, API, and visualization separation.
+        - label: I have identified whether the proposal is paper-faithful or educational.

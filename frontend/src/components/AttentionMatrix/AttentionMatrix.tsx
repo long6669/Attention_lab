@@ -44,11 +44,7 @@ function flattenTensorRows(values: TensorValues): TensorScalar[][] {
   if (!Array.isArray(values)) {
     return [[values]];
   }
-  if (
-    values.every(
-      (value) => typeof value === "number" || value === null,
-    )
-  ) {
+  if (values.every((value) => typeof value === "number" || value === null)) {
     return [values as TensorScalar[]];
   }
   return values.flatMap((value) => flattenTensorRows(value));
@@ -85,9 +81,8 @@ export function AttentionMatrix({
         : undefined,
     [head, tensor],
   );
-  const finiteValues = matrix
-    ?.flat()
-    .filter((value): value is number => value !== null) ?? [];
+  const finiteValues =
+    matrix?.flat().filter((value): value is number => value !== null) ?? [];
   const min = finiteValues.length ? Math.min(...finiteValues) : 0;
   const max = finiteValues.length ? Math.max(...finiteValues) : 1;
   const queryTokens =
@@ -154,13 +149,16 @@ export function AttentionMatrix({
               </div>
               {(matrix[0] ?? []).map((_, column) => (
                 <div className="matrix__axis" key={`column-${column}`}>
-                  {isAttention ? tokens[column] ?? column : column}
+                  {isAttention ? (tokens[column] ?? column) : column}
                 </div>
               ))}
               {matrix.map((row, rowIndex) => [
-                <div className="matrix__axis matrix__axis--row" key={`row-${rowIndex}`}>
+                <div
+                  className="matrix__axis matrix__axis--row"
+                  key={`row-${rowIndex}`}
+                >
                   {isAttention
-                    ? queryTokens[rowIndex] ?? rowIndex
+                    ? (queryTokens[rowIndex] ?? rowIndex)
                     : matrix.length === tokens.length
                       ? tokens[rowIndex]
                       : rowIndex}
@@ -171,7 +169,8 @@ export function AttentionMatrix({
                     style={{
                       backgroundColor: cellColor(value, min, max),
                       color:
-                        value !== null && (value - min) / (max - min || 1) > 0.62
+                        value !== null &&
+                        (value - min) / (max - min || 1) > 0.62
                           ? "#ffffff"
                           : "#243037",
                     }}

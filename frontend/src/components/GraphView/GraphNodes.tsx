@@ -27,7 +27,8 @@ function NodeShell({
     .filter(Boolean)
     .join(" ");
 
-  const Icon = kind === "cache" ? Database : kind === "generic" ? HelpCircle : Box;
+  const Icon =
+    kind === "cache" ? Database : kind === "generic" ? HelpCircle : Box;
   const cacheTokens = graphNode.attrs.cached_tokens;
   const previousTokens = graphNode.attrs.previous_tokens;
   const appendedTokens = graphNode.attrs.appended_tokens;

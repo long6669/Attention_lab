@@ -1,4 +1,4 @@
-from .kda import KDAState, KDARun, KimiDeltaAttention
+from .kda import KDARun, KDAState, KimiDeltaAttention
 from .mha import AttentionRun, AttentionState, MHAConfig, MultiHeadAttention
 from .mla import LatentAttentionRun, LatentAttentionState, MultiHeadLatentAttention
 from .sparse import CompressedSparseAttention

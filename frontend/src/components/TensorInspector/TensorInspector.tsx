@@ -32,7 +32,9 @@ export function TensorInspector({ node, tensors }: TensorInspectorProps) {
           </div>
           <Braces size={18} aria-hidden="true" />
         </div>
-        <div className="empty-state">Select a graph node to inspect its tensors.</div>
+        <div className="empty-state">
+          Select a graph node to inspect its tensors.
+        </div>
       </section>
     );
   }
@@ -86,7 +88,9 @@ export function TensorInspector({ node, tensors }: TensorInspectorProps) {
       <div className="tensor-values">
         <div className="tensor-values__label">
           <span>Values</span>
-          <span>{tensor.shape.reduce((total, size) => total * size, 1)} items</span>
+          <span>
+            {tensor.shape.reduce((total, size) => total * size, 1)} items
+          </span>
         </div>
         <pre>
           {JSON.stringify(

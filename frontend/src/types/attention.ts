@@ -153,11 +153,4 @@ export interface AttentionRun {
 }
 
 export type AttentionArchitecture =
-  | "mha"
-  | "mqa"
-  | "gqa"
-  | "rope"
-  | "mla"
-  | "kda"
-  | "csa"
-  | "hca";
+  "mha" | "mqa" | "gqa" | "rope" | "mla" | "kda" | "csa" | "hca";

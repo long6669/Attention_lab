@@ -54,8 +54,7 @@ export function GraphView({
       setEdges(layout.edges);
       requestAnimationFrame(() => {
         const focusNode =
-          layout.nodes.find((node) => node.id === currentNodeId) ??
-          layout.nodes[0];
+          layout.nodes.find((node) => node.data.isCurrent) ?? layout.nodes[0];
         if (focusNode) {
           instance?.setCenter(
             focusNode.position.x + 92,

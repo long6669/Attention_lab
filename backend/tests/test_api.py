@@ -1,9 +1,8 @@
 import unittest
 
-from fastapi.testclient import TestClient
-
 from app.api.attention import reset_sessions
 from app.main import app
+from fastapi.testclient import TestClient
 
 
 class AttentionApiTest(unittest.TestCase):
@@ -77,9 +76,7 @@ class AttentionApiTest(unittest.TestCase):
                     architecture,
                 )
                 self.assertEqual(payload["memory"]["cache_kind"], cache_kind)
-                cache_key = (
-                    "latent_cache" if cache_kind == "latent" else "k_cache"
-                )
+                cache_key = "latent_cache" if cache_kind == "latent" else "k_cache"
                 self.assertEqual(payload["memory"][cache_key]["shape"], shape)
 
     def test_run_rejects_unknown_architecture(self) -> None:

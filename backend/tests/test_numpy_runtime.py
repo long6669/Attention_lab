@@ -1,7 +1,6 @@
 import unittest
 
 import numpy as np
-
 from app.runtime import NumPyRuntime
 
 
@@ -139,9 +138,7 @@ class NumPyRuntimeTest(unittest.TestCase):
     def test_masked_softmax_assigns_zero_to_future_positions(self) -> None:
         scores = np.ones((3, 3), dtype=np.float32)
 
-        probabilities = self.runtime.softmax(
-            self.runtime.causal_mask(scores)
-        )
+        probabilities = self.runtime.softmax(self.runtime.causal_mask(scores))
 
         np.testing.assert_allclose(probabilities.sum(axis=-1), 1.0)
         np.testing.assert_array_equal(

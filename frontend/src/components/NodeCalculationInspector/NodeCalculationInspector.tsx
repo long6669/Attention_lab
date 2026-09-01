@@ -1,14 +1,5 @@
-import {
-  Braces,
-  Calculator,
-  ChevronDown,
-  ChevronRight,
-} from "lucide-react";
-import {
-  type ComponentType,
-  type ReactNode,
-  useState,
-} from "react";
+import { Braces, Calculator, ChevronDown, ChevronRight } from "lucide-react";
+import { type ComponentType, type ReactNode, useState } from "react";
 
 import type {
   GraphNode,
@@ -177,7 +168,9 @@ export function NodeCalculationInspector({
           </div>
           <Braces size={18} aria-hidden="true" />
         </div>
-        <div className="empty-state">Select a graph node to inspect its calculation.</div>
+        <div className="empty-state">
+          Select a graph node to inspect its calculation.
+        </div>
       </section>
     );
   }
@@ -219,7 +212,11 @@ export function NodeCalculationInspector({
             tensors={tensors}
           />
         ) : null}
-        <TensorGroup label="Output tensor" ids={node.outputs} tensors={tensors} />
+        <TensorGroup
+          label="Output tensor"
+          ids={node.outputs}
+          tensors={tensors}
+        />
       </div>
 
       <button
@@ -328,7 +325,9 @@ function LinearInspector({ node, tensors, tokens }: CalculationProps) {
   );
   const result = scalarAt(output.values, [0, tokenIndex, outputIndex]);
   const tokenLabel =
-    tokenCount === 1 ? tokens.at(-1) : tokens[tokenIndex] ?? `token ${tokenIndex}`;
+    tokenCount === 1
+      ? tokens.at(-1)
+      : (tokens[tokenIndex] ?? `token ${tokenIndex}`);
 
   return (
     <div className="specialized-calculation">
@@ -352,8 +351,8 @@ function LinearInspector({ node, tensors, tokens }: CalculationProps) {
         />
       </CalculationControls>
       <CalculationEquation>
-        {output.name}[{tokenIndex}, {outputIndex}] = {input.name}[
-        {tokenIndex}, :] @ {weight.name}[:, {outputIndex}]
+        {output.name}[{tokenIndex}, {outputIndex}] = {input.name}[{tokenIndex},
+        :] @ {weight.name}[:, {outputIndex}]
       </CalculationEquation>
       <p className="calculation-caption">Selected token: {tokenLabel}</p>
       <VectorLine label="Input vector" values={inputVector} />
@@ -393,8 +392,18 @@ function MatMulInspector({ node, tensors, tokens }: CalculationProps) {
   return (
     <div className="specialized-calculation">
       <CalculationControls>
-        <IndexSelect label="Head" value={head} count={heads} onChange={setHead} />
-        <IndexSelect label="Row / query" value={row} count={rows} onChange={setRow} />
+        <IndexSelect
+          label="Head"
+          value={head}
+          count={heads}
+          onChange={setHead}
+        />
+        <IndexSelect
+          label="Row / query"
+          value={row}
+          count={rows}
+          onChange={setRow}
+        />
         <IndexSelect
           label="Column / key"
           value={column}
@@ -493,7 +502,12 @@ function RoPEInspector({ node, tensors, tokens }: CalculationProps) {
   return (
     <div className="specialized-calculation">
       <CalculationControls>
-        <IndexSelect label="Head" value={head} count={heads} onChange={setHead} />
+        <IndexSelect
+          label="Head"
+          value={head}
+          count={heads}
+          onChange={setHead}
+        />
         <IndexSelect
           label="Token"
           value={tokenIndex}
@@ -589,8 +603,18 @@ function SoftmaxInspector({ node, tensors, tokens }: CalculationProps) {
   return (
     <div className="specialized-calculation">
       <CalculationControls>
-        <IndexSelect label="Head" value={head} count={heads} onChange={setHead} />
-        <IndexSelect label="Query row" value={row} count={rows} onChange={setRow} />
+        <IndexSelect
+          label="Head"
+          value={head}
+          count={heads}
+          onChange={setHead}
+        />
+        <IndexSelect
+          label="Query row"
+          value={row}
+          count={rows}
+          onChange={setRow}
+        />
       </CalculationControls>
       <CalculationEquation>
         softmax(x) = exp(x - max(x)) / sum(exp(x - max(x)))
@@ -620,7 +644,7 @@ function CacheInspector({ node, tensors, tokens }: CalculationProps) {
   const appendedTokens =
     typeof node.attrs.appended_tokens === "number"
       ? node.attrs.appended_tokens
-      : appended.shape.at(-2) ?? 0;
+      : (appended.shape.at(-2) ?? 0);
 
   return (
     <div className="specialized-calculation">
@@ -704,7 +728,12 @@ function ScalarTensorCalculation({
   return (
     <div className="specialized-calculation">
       <CalculationControls>
-        <IndexSelect label="Head" value={head} count={heads} onChange={setHead} />
+        <IndexSelect
+          label="Head"
+          value={head}
+          count={heads}
+          onChange={setHead}
+        />
         <IndexSelect label="Query" value={row} count={rows} onChange={setRow} />
         <IndexSelect
           label="Key"
@@ -893,10 +922,7 @@ function vectorAt(
   );
 }
 
-function matrixAtHead(
-  tensor: TensorData,
-  head: number,
-): TensorScalar[][] {
+function matrixAtHead(tensor: TensorData, head: number): TensorScalar[][] {
   const indices = tensor.shape.length === 4 ? [0, head] : [];
   let current: TensorValues | undefined = tensor.values;
   for (const index of indices) {
@@ -930,7 +956,10 @@ function formatScalar(value: TensorScalar): string {
   if (value === null || !Number.isFinite(value)) {
     return "-inf";
   }
-  if (Math.abs(value) >= 1000 || (Math.abs(value) > 0 && Math.abs(value) < 0.001)) {
+  if (
+    Math.abs(value) >= 1000 ||
+    (Math.abs(value) > 0 && Math.abs(value) < 0.001)
+  ) {
     return value.toExponential(3);
   }
   return value.toFixed(4);

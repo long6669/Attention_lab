@@ -43,9 +43,7 @@ class MemoryTensorSpec:
             "axes": list(self.axes),
             "growth_axis": self.growth_axis,
             "growth_axis_name": (
-                self.axes[self.growth_axis]
-                if self.growth_axis is not None
-                else None
+                self.axes[self.growth_axis] if self.growth_axis is not None else None
             ),
             "values_loaded": array.size <= INLINE_VALUE_LIMIT,
             "blocks": self._blocks(array),
@@ -60,9 +58,7 @@ class MemoryTensorSpec:
 
         growth_size = array.shape[self.growth_axis]
         growth_step = max(1, math.ceil(growth_size / MAX_BLOCK_GROUPS))
-        head_axis = (
-            self.axes.index("head") if "head" in self.axes else None
-        )
+        head_axis = self.axes.index("head") if "head" in self.axes else None
         head_size = array.shape[head_axis] if head_axis is not None else 1
         head_step = max(1, math.ceil(head_size / MAX_BLOCK_GROUPS))
         blocks: list[dict[str, Any]] = []
@@ -76,10 +72,14 @@ class MemoryTensorSpec:
                 if head_axis is not None:
                     slices[head_axis] = slice(head_start, head_end)
                 block = array[tuple(slices)]
-                finite = block[np.isfinite(block)] if np.issubdtype(
-                    block.dtype,
-                    np.floating,
-                ) else block.reshape(-1)
+                finite = (
+                    block[np.isfinite(block)]
+                    if np.issubdtype(
+                        block.dtype,
+                        np.floating,
+                    )
+                    else block.reshape(-1)
+                )
                 blocks.append(
                     {
                         "start": start,
@@ -90,15 +90,9 @@ class MemoryTensorSpec:
                         "min": float(np.min(finite)) if finite.size else None,
                         "max": float(np.max(finite)) if finite.size else None,
                         "mean_abs": (
-                            float(np.mean(np.abs(finite)))
-                            if finite.size
-                            else None
+                            float(np.mean(np.abs(finite))) if finite.size else None
                         ),
-                        "l2": (
-                            float(np.linalg.norm(finite))
-                            if finite.size
-                            else None
-                        ),
+                        "l2": (float(np.linalg.norm(finite)) if finite.size else None),
                     }
                 )
         return blocks

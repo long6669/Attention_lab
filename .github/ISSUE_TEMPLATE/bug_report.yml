@@ -1,0 +1,47 @@
+name: Bug report
+description: Report incorrect behavior or a regression.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for helping improve AttnLab.
+  - type: dropdown
+    id: architecture
+    attributes:
+      label: Attention architecture
+      options:
+        - MHA
+        - MQA
+        - GQA
+        - RoPE
+        - MLA
+        - KDA
+        - CSA
+        - HCA
+        - Not architecture-specific
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Describe the observed and expected behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Include input tokens, selected node, timeline step, and commands.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Browser, operating system, Python version, and Node version.

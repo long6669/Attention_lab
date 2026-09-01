@@ -1,7 +1,6 @@
 import unittest
 
 import numpy as np
-
 from app.architectures import MHAConfig, MultiHeadAttention
 
 

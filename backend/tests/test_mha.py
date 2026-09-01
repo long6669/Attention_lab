@@ -1,7 +1,6 @@
 import unittest
 
 import numpy as np
-
 from app.architectures import MultiHeadAttention
 
 
@@ -40,7 +39,9 @@ class MultiHeadAttentionTest(unittest.TestCase):
 
     def test_causal_mask_removes_future_attention(self) -> None:
         probabilities = self.executor.value("attention_probs")
-        future = probabilities[..., np.triu_indices(3, k=1)[0], np.triu_indices(3, k=1)[1]]
+        future = probabilities[
+            ..., np.triu_indices(3, k=1)[0], np.triu_indices(3, k=1)[1]
+        ]
 
         np.testing.assert_array_equal(
             future,
@@ -122,9 +123,7 @@ class MultiHeadAttentionDecodeTest(unittest.TestCase):
         self.assertEqual(executor.value("k_new_heads").shape, (1, 2, 1, 4))
         self.assertEqual(executor.value("v_new_heads").shape, (1, 2, 1, 4))
 
-        linear_nodes = [
-            node for node in executor.graph.nodes if node.op == "linear"
-        ]
+        linear_nodes = [node for node in executor.graph.nodes if node.op == "linear"]
         self.assertEqual(
             [node.id for node in linear_nodes],
             ["q_new_proj", "k_new_proj", "v_new_proj"],
