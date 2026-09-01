@@ -148,6 +148,17 @@ export interface AttentionRun {
     resulting_tokens: number;
     update_kind?: "append" | "state_update";
   };
+  metrics: {
+    estimated_flops: number;
+    flops_basis: "shape_estimate";
+    parameter_count: number;
+    activation_bytes: number;
+    graph_nodes: number;
+    graph_edges: number;
+    trace_steps: number;
+    memory_growth: "constant" | "linear";
+    memory_bytes_per_token: number;
+  };
   warnings: string[];
   decoded_token?: string;
 }

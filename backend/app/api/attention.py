@@ -15,6 +15,7 @@ from app.architectures import (
     MultiHeadLatentAttention,
 )
 from app.memory import infer_axes, json_values, slice_memory
+from app.metrics import build_execution_metrics
 
 MAX_INPUT_TOKENS = 10
 MAX_DECODED_TOKENS = 11
@@ -117,6 +118,7 @@ def run_attention(text: str, architecture: str = "mha") -> dict[str, Any]:
     payload = result.to_dict()
     payload["session_id"] = session_id
     payload["warnings"] = warnings
+    payload["metrics"] = build_execution_metrics(payload)
     return payload
 
 
@@ -146,6 +148,7 @@ def decode_attention(
     payload["session_id"] = session_id
     payload["warnings"] = []
     payload["decoded_token"] = decoded_token
+    payload["metrics"] = build_execution_metrics(payload)
     return payload
 
 

@@ -32,6 +32,14 @@ class AttentionApiTest(unittest.TestCase):
             [1, 2, 4, 4],
         )
         self.assertEqual(payload["memory"]["total_bytes"], 256)
+        self.assertGreater(payload["metrics"]["estimated_flops"], 0)
+        self.assertEqual(payload["metrics"]["flops_basis"], "shape_estimate")
+        self.assertEqual(payload["metrics"]["memory_growth"], "linear")
+        self.assertEqual(payload["metrics"]["memory_bytes_per_token"], 64)
+        self.assertEqual(
+            payload["metrics"]["graph_nodes"],
+            len(payload["graph"]["nodes"]),
+        )
 
     def test_run_rejects_empty_input(self) -> None:
         response = self.client.post("/api/run", json={"text": "  "})
@@ -141,6 +149,8 @@ class AttentionApiTest(unittest.TestCase):
             payload["cache_activity"]["update_kind"],
             "state_update",
         )
+        self.assertEqual(payload["metrics"]["memory_growth"], "constant")
+        self.assertEqual(payload["metrics"]["memory_bytes_per_token"], 0)
 
     def test_kda_state_supports_head_slice(self) -> None:
         prefill = self.client.post(

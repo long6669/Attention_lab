@@ -31,6 +31,10 @@ prefill and one-token decode.
   softmax stages, RoPE pairs, cache appends, recurrent updates, and routing.
 - **Compare memory models**: KV cache, latent cache, and fixed recurrent state
   share a scale-aware `MemorySpec`.
+- **Compare architectures side by side**: run 2-4 paths on the same tokens and
+  inspect graph size, estimated FLOPs, memory, and per-token cache growth.
+- **Share and export experiments**: configuration lives in the URL; graph,
+  trace, and PNG exports are available from the workspace.
 - **Architecture-neutral pipeline**: IR, runtime, trace, API, layout, and
   visualization remain separate.
 
@@ -60,6 +64,25 @@ The Memory View does not assume a fixed KV shape:
 - Large tensors are not included in the default API payload.
 
 ![AttnLab matrix and persistent memory views](docs/assets/attnlab-memory-view.png)
+
+## Compare and learn
+
+Switch to **Compare** to execute the same input through MHA, MQA, GQA, RoPE,
+MLA, KDA, CSA, or HCA. Each result reports metrics derived from its executed
+graph:
+
+- Persistent memory and bytes added per token.
+- Constant versus linear memory growth.
+- Graph nodes and trace steps.
+- Shape-based FLOP estimates, clearly labeled as estimates.
+
+The examples gallery opens focused comparisons for MQA cache sharing, MLA
+latent compression, KDA fixed state, and CSA Top-K routing. In the workbench,
+the architecture lesson follows **Concept → Formula → Execution → Memory**.
+
+Experiment state is encoded in the URL. Use the export toolbar to copy a
+shareable link or download Graph JSON, Trace JSON, and a PNG of the current
+view.
 
 ## Quick start
 
@@ -169,10 +192,7 @@ named and documented as approximations rather than paper-faithful replicas.
 
 ## Roadmap
 
-- Side-by-side architecture comparison.
-- Shareable experiment URLs and trace export.
 - More reference parity tests.
-- Guided architecture lessons.
 - Custom attention graphs after the core comparison workflow is stable.
 
 ## Contributing
