@@ -10,6 +10,9 @@ Supported attention paths:
 - GQA
 - MHA with RoPE
 - MLA with a persistent low-rank latent cache
+- KDA with a persistent recurrent delta-rule state
+- CSA with compressed Top-K routing
+- HCA with hierarchical compressed routing
 
 ## Run locally
 

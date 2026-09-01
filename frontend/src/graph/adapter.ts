@@ -28,6 +28,14 @@ const SUPPORTED_OPS = new Set([
   "scale",
   "causal_mask",
   "softmax",
+  "decay",
+  "erase",
+  "write",
+  "scan",
+  "sequence_compression",
+  "indexer",
+  "topk",
+  "routing",
   "merge_heads",
   "output",
 ]);
@@ -51,11 +59,13 @@ export function graphToFlow(
     return {
       id: graphNode.id,
       type:
-        graphNode.op === "cache_append"
-          ? "cache"
-          : graphNode.op === "cache_read"
+        graphNode.op === "cache_append" ||
+        graphNode.op === "cache_read" ||
+        graphNode.op === "state_init" ||
+        graphNode.op === "state_read" ||
+        graphNode.op === "state_update"
             ? "cache"
-          : SUPPORTED_OPS.has(graphNode.op)
+            : SUPPORTED_OPS.has(graphNode.op)
             ? "operator"
             : "generic",
       position: { x: 0, y: 0 },

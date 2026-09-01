@@ -149,6 +149,64 @@ class NumPyRuntimeTest(unittest.TestCase):
             np.zeros(3, dtype=np.float32),
         )
 
+    def test_kda_scan_applies_delta_write_and_returns_final_state(self) -> None:
+        q = np.array([[[[1.0, 0.0]]]], dtype=np.float32)
+        k = np.array([[[[1.0, 0.0]]]], dtype=np.float32)
+        v = np.array([[[[2.0, 3.0]]]], dtype=np.float32)
+        state = np.zeros((1, 1, 2, 2), dtype=np.float32)
+
+        output, decayed, erased, written, final_state = self.runtime.kda_scan(
+            q,
+            k,
+            v,
+            state,
+            decay=0.9,
+            write_rate=0.5,
+        )
+
+        expected = np.array([[[[1.0, 1.5], [0.0, 0.0]]]], dtype=np.float32)
+        np.testing.assert_allclose(final_state, expected)
+        np.testing.assert_allclose(written, expected[:, :, None, :, :])
+        np.testing.assert_allclose(output, [[[[1.0, 1.5]]]])
+        np.testing.assert_array_equal(decayed, 0.0)
+        np.testing.assert_array_equal(erased, 0.0)
+
+    def test_sequence_compression_builds_causal_window_summaries(self) -> None:
+        values = np.array([[[[1.0], [2.0], [4.0]]]], dtype=np.float32)
+
+        compressed, spans = self.runtime.sequence_compress(values, [2])
+
+        self.assertEqual(spans, [(0, 1, 0), (0, 2, 0), (1, 3, 0)])
+        np.testing.assert_allclose(
+            compressed.reshape(-1),
+            [1.0, 1.5, 3.0],
+        )
+
+    def test_index_topk_and_routing_keep_selected_context(self) -> None:
+        queries = np.ones((1, 1, 3, 2), dtype=np.float32)
+        keys = np.array(
+            [[[[1.0, 0.0], [2.0, 0.0], [3.0, 0.0]]]],
+            dtype=np.float32,
+        )
+        values = np.array(
+            [[[[10.0, 1.0], [20.0, 2.0], [30.0, 3.0]]]],
+            dtype=np.float32,
+        )
+        spans = [(0, 1, 0), (0, 2, 0), (1, 3, 0)]
+
+        scores = self.runtime.index_scores(queries, keys, spans, query_offset=0)
+        indices = self.runtime.topk(scores, 2)
+        selected = self.runtime.route_scores(scores, indices)
+        routed = self.runtime.route_values(values, indices)
+        probabilities = self.runtime.softmax(selected)
+        output = self.runtime.weighted_route(probabilities, routed)
+
+        self.assertTrue(np.isneginf(scores[0, 0, 0, 1:]).all())
+        self.assertEqual(indices.shape, (1, 1, 3, 2))
+        self.assertEqual(routed.shape, (1, 1, 3, 2, 2))
+        self.assertEqual(output.shape, (1, 1, 3, 2))
+        self.assertTrue(np.isfinite(output).all())
+
 
 if __name__ == "__main__":
     unittest.main()

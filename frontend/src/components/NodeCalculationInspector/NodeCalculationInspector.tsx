@@ -91,6 +91,50 @@ const OP_DESCRIPTIONS: Record<string, OpDescription> = {
     role: "Appends new K or V vectors along the sequence axis.",
     formula: "cache_new = concat(cache_previous, value_new, axis=T)",
   },
+  state_init: {
+    role: "Creates the fixed-size recurrent fast-weight state.",
+    formula: "S_0 = zeros([B, H, Dh, Dh])",
+  },
+  state_read: {
+    role: "Reads the recurrent state persisted by the previous decode step.",
+    formula: "S_previous = runtime_state",
+  },
+  decay: {
+    role: "Forgets a controlled fraction of the previous recurrent state.",
+    formula: "S_decay = alpha * S_previous",
+  },
+  erase: {
+    role: "Removes the value currently predicted by the normalized key.",
+    formula: "S_erase = S_decay - beta * outer(k, k @ S_decay)",
+  },
+  write: {
+    role: "Writes the current key/value association into recurrent state.",
+    formula: "S_write = S_erase + beta * outer(k, v)",
+  },
+  scan: {
+    role: "Applies the delta state transition sequentially over tokens.",
+    formula: "y_t = q_t @ S_t; S_t = DeltaUpdate(S_(t-1), k_t, v_t)",
+  },
+  state_update: {
+    role: "Persists the final scan state for the next decode call.",
+    formula: "runtime_state = S_T",
+  },
+  sequence_compression: {
+    role: "Builds causal local or hierarchical summaries of the sequence.",
+    formula: "C_i = mean(X[max(0, i-window+1):i+1])",
+  },
+  indexer: {
+    role: "Scores compressed sequence entries for each query.",
+    formula: "index_score = Q @ C_K^T / sqrt(Dh)",
+  },
+  topk: {
+    role: "Selects the highest-scoring compressed routes.",
+    formula: "route_ids = arg_top_k(index_score)",
+  },
+  routing: {
+    role: "Gathers selected values or combines them with routing weights.",
+    formula: "context = sum_j route_prob_j * routed_value_j",
+  },
   merge_heads: {
     role: "Combines independent head outputs into the model dimension.",
     formula: "[B, H, T, Dh] -> [B, T, H * Dh]",
@@ -805,7 +849,10 @@ function formatShape(shape: number[]): string {
   return `[${shape.join(", ")}]`;
 }
 
-function formatTensorValues(values: TensorValues): string {
+function formatTensorValues(values: TensorValues | undefined): string {
+  if (values === undefined) {
+    return "Values omitted from the default payload. Use a bounded memory slice.";
+  }
   return JSON.stringify(
     values,
     (_key, value) => (value === null ? "masked" : value),
@@ -814,7 +861,7 @@ function formatTensorValues(values: TensorValues): string {
 }
 
 function scalarAt(
-  values: TensorValues,
+  values: TensorValues | undefined,
   indices: number[],
 ): TensorScalar {
   let current: TensorValues | undefined = values;
@@ -828,7 +875,7 @@ function scalarAt(
 }
 
 function vectorAt(
-  values: TensorValues,
+  values: TensorValues | undefined,
   indices: number[],
 ): TensorScalar[] {
   let current: TensorValues | undefined = values;

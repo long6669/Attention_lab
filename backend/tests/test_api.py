@@ -94,6 +94,82 @@ class AttentionApiTest(unittest.TestCase):
             "Unsupported attention architecture: unknown",
         )
 
+    def test_run_supports_v05_and_v06_architectures(self) -> None:
+        expectations = {
+            "kda": ("recurrent", ["state_init", "decay", "erase", "write", "scan"]),
+            "csa": (
+                "kv",
+                ["sequence_compression", "indexer", "topk", "routing"],
+            ),
+            "hca": (
+                "kv",
+                ["sequence_compression", "indexer", "topk", "routing"],
+            ),
+        }
+
+        for architecture, (cache_kind, expected_ops) in expectations.items():
+            with self.subTest(architecture=architecture):
+                response = self.client.post(
+                    "/api/run",
+                    json={
+                        "text": "one two three",
+                        "architecture": architecture,
+                    },
+                )
+                self.assertEqual(response.status_code, 200)
+                payload = response.json()
+                ops = {node["op"] for node in payload["graph"]["nodes"]}
+                self.assertEqual(payload["memory"]["cache_kind"], cache_kind)
+                self.assertTrue(set(expected_ops).issubset(ops))
+
+    def test_kda_decode_keeps_fixed_recurrent_memory(self) -> None:
+        prefill = self.client.post(
+            "/api/run",
+            json={"text": "one two three", "architecture": "kda"},
+        ).json()
+
+        decode = self.client.post(
+            "/api/decode",
+            json={"session_id": prefill["session_id"]},
+        )
+
+        self.assertEqual(decode.status_code, 200)
+        payload = decode.json()
+        self.assertEqual(payload["memory"]["total_bytes"], 128)
+        self.assertEqual(
+            payload["memory"]["recurrent_state"]["shape"],
+            [1, 2, 4, 4],
+        )
+        self.assertEqual(
+            payload["cache_activity"]["update_kind"],
+            "state_update",
+        )
+
+    def test_kda_state_supports_head_slice(self) -> None:
+        prefill = self.client.post(
+            "/api/run",
+            json={"text": "one two three", "architecture": "kda"},
+        ).json()
+
+        response = self.client.post(
+            "/api/memory/slice",
+            json={
+                "session_id": prefill["session_id"],
+                "memory_id": "recurrent_state",
+                "start": 0,
+                "end": 1,
+                "head": 1,
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["shape"], [1, 1, 4, 4])
+        self.assertEqual(
+            payload["axes"],
+            ["batch", "head", "key_feature", "value_feature"],
+        )
+
     def test_decode_adds_token_and_grows_kv_cache(self) -> None:
         prefill = self.client.post(
             "/api/run",
@@ -214,6 +290,30 @@ class AttentionApiTest(unittest.TestCase):
             payload["tensors"]["raw_scores"]["shape"],
             [1, 2, 1, 4],
         )
+
+    def test_memory_slice_reads_only_requested_cache_range(self) -> None:
+        prefill = self.client.post(
+            "/api/run",
+            json={"text": "one two three four", "architecture": "mha"},
+        ).json()
+
+        response = self.client.post(
+            "/api/memory/slice",
+            json={
+                "session_id": prefill["session_id"],
+                "memory_id": "k_cache",
+                "start": 1,
+                "end": 3,
+                "head": 0,
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["shape"], [1, 1, 2, 4])
+        self.assertEqual(payload["numel"], 8)
+        self.assertEqual(payload["selection"]["start"], 1)
+        self.assertEqual(payload["selection"]["end"], 3)
 
     def test_health(self) -> None:
         response = self.client.get("/health")

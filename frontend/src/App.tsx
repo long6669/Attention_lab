@@ -4,7 +4,7 @@ import { Activity, AlertCircle, Cpu, LoaderCircle } from "lucide-react";
 import { decodeOneToken, runAttention } from "./api/attention";
 import { AttentionMatrix } from "./components/AttentionMatrix/AttentionMatrix";
 import { GraphView } from "./components/GraphView/GraphView";
-import { KVCacheView } from "./components/KVCacheView/KVCacheView";
+import { MemoryView } from "./components/MemoryView/MemoryView";
 import { NodeCalculationInspector } from "./components/NodeCalculationInspector/NodeCalculationInspector";
 import { Timeline } from "./components/Timeline/Timeline";
 import type {
@@ -20,6 +20,9 @@ const ARCHITECTURE_LABELS: Record<AttentionArchitecture, string> = {
   gqa: "Grouped-Query Attention",
   rope: "MHA with RoPE",
   mla: "Multi-Head Latent Attention",
+  kda: "Kimi Delta Attention",
+  csa: "Compressed Sparse Attention",
+  hca: "Hierarchical Compressed Attention",
 };
 
 export default function App() {
@@ -100,13 +103,9 @@ export default function App() {
     () => result?.graph.nodes.find((node) => node.id === selectedNodeId),
     [result, selectedNodeId],
   );
-  const currentNode = useMemo(
-    () => result?.graph.nodes.find((node) => node.id === currentNodeId),
-    [currentNodeId, result],
-  );
   const matrixTensor = useMemo(
-    () => getMatrixTensor(currentNode, result),
-    [currentNode, result],
+    () => getVisualTensor(selectedNode, result),
+    [selectedNode, result],
   );
 
   function handleSubmit(event: { preventDefault: () => void }) {
@@ -123,13 +122,16 @@ export default function App() {
     setIsPlaying(false);
     try {
       const payload = await decodeOneToken(result.session_id);
-      const cacheStep = payload.trace.findIndex(
-        (event) => event.node_id === "k_cache_read",
+      const memoryReadStep = payload.trace.findIndex(
+        (event) =>
+          event.op === "cache_read" || event.op === "state_read",
       );
       setPreviousMemory(result.memory);
       setResult(payload);
-      setCurrentStep(Math.max(cacheStep, 0));
-      setSelectedNodeId(payload.trace[Math.max(cacheStep, 0)]?.node_id);
+      setCurrentStep(Math.max(memoryReadStep, 0));
+      setSelectedNodeId(
+        payload.trace[Math.max(memoryReadStep, 0)]?.node_id,
+      );
     } catch (decodeError) {
       setError(
         decodeError instanceof Error
@@ -234,6 +236,19 @@ export default function App() {
                   <span>R {result.config.kv_lora_rank}</span>
                 ) : null}
                 {result.config.use_rope ? <span>RoPE</span> : null}
+                {result.config.architecture === "kda" ? (
+                  <>
+                    <span>Decay {result.config.state_decay}</span>
+                    <span>Write {result.config.state_write_rate}</span>
+                  </>
+                ) : null}
+                {result.config.architecture === "csa" ||
+                result.config.architecture === "hca" ? (
+                  <>
+                    <span>Window {result.config.compression_window}</span>
+                    <span>TopK {result.config.routing_top_k}</span>
+                  </>
+                ) : null}
                 <span>{result.config.dtype}</span>
               </div>
             ) : null}
@@ -287,14 +302,15 @@ export default function App() {
 
         <div className="detail-grid detail-grid--single">
           <AttentionMatrix
-            node={currentNode}
+            node={selectedNode}
             tensor={matrixTensor}
             tokens={result?.tokens ?? []}
             phase={result?.phase}
           />
         </div>
 
-        <KVCacheView
+        <MemoryView
+          sessionId={result?.session_id}
           memory={result?.memory}
           previousMemory={previousMemory}
           activity={result?.cache_activity}
@@ -308,13 +324,13 @@ export default function App() {
   );
 }
 
-function getMatrixTensor(
+function getVisualTensor(
   node: GraphNode | undefined,
   result: AttentionRun | undefined,
 ) {
-  if (node?.attrs.visualization !== "attention_matrix") {
+  if (!node) {
     return undefined;
   }
-  const outputId = node.outputs[0];
-  return outputId ? result?.tensors[outputId] : undefined;
+  const tensorId = node.outputs[0] ?? node.inputs[0];
+  return tensorId ? result?.tensors[tensorId] : undefined;
 }

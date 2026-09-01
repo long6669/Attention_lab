@@ -6,6 +6,7 @@ from typing import Any
 import numpy as np
 from numpy.typing import NDArray
 
+from app.memory import MemorySpec, MemoryTensorSpec
 from app.ops import PrimitiveExecutor
 
 
@@ -20,6 +21,10 @@ class MHAConfig:
     use_rope: bool = False
     rope_base: float = 10000.0
     kv_lora_rank: int = 4
+    state_decay: float = 0.95
+    state_write_rate: float = 0.5
+    compression_window: int = 2
+    routing_top_k: int = 2
 
     def __post_init__(self) -> None:
         if self.d_model <= 0:
@@ -36,6 +41,12 @@ class MHAConfig:
             raise ValueError("rope_base must be positive.")
         if self.kv_lora_rank <= 0:
             raise ValueError("kv_lora_rank must be positive.")
+        if not 0.0 <= self.state_decay <= 1.0:
+            raise ValueError("state_decay must be between zero and one.")
+        if not 0.0 <= self.state_write_rate <= 1.0:
+            raise ValueError("state_write_rate must be between zero and one.")
+        if self.compression_window <= 0 or self.routing_top_k <= 0:
+            raise ValueError("Compression and routing sizes must be positive.")
 
     @property
     def head_dim(self) -> int:
@@ -68,6 +79,29 @@ class AttentionRun:
         k_cache = self.state.k_cache
         v_cache = self.state.v_cache
         appended_tokens = len(self.tokens) - self.previous_tokens
+        memory_spec = MemorySpec(
+            kind="attention_cache",
+            tensors=(
+                MemoryTensorSpec(
+                    id="k_cache",
+                    name="Key Cache",
+                    kind="kv_cache",
+                    role="key",
+                    value=k_cache,
+                    axes=("batch", "head", "token", "feature"),
+                    growth_axis=2,
+                ),
+                MemoryTensorSpec(
+                    id="v_cache",
+                    name="Value Cache",
+                    kind="kv_cache",
+                    role="value",
+                    value=v_cache,
+                    axes=("batch", "head", "token", "feature"),
+                    growth_axis=2,
+                ),
+            ),
+        ).to_dict()
         return {
             "tokens": list(self.tokens),
             "phase": self.phase,
@@ -88,6 +122,7 @@ class AttentionRun:
                 "v_cache": self._cache_summary(v_cache),
                 "total_elements": int(k_cache.size + v_cache.size),
                 "total_bytes": int(k_cache.nbytes + v_cache.nbytes),
+                "spec": memory_spec,
             },
             "cache_activity": {
                 "phase": self.phase,

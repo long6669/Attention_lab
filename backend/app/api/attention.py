@@ -3,14 +3,18 @@ from threading import Lock
 from typing import Any, Optional
 from uuid import uuid4
 
+import numpy as np
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from app.architectures import (
     MHAConfig,
+    CompressedSparseAttention,
+    KimiDeltaAttention,
     MultiHeadAttention,
     MultiHeadLatentAttention,
 )
+from app.memory import infer_axes, json_values, slice_memory
 
 MAX_INPUT_TOKENS = 10
 MAX_DECODED_TOKENS = 11
@@ -26,6 +30,14 @@ class RunRequest(BaseModel):
 class DecodeRequest(BaseModel):
     session_id: str
     new_token: Optional[str] = None
+
+
+class MemorySliceRequest(BaseModel):
+    session_id: str
+    memory_id: str
+    start: int = 0
+    end: int = 8
+    head: Optional[int] = None
 
 
 @dataclass
@@ -62,6 +74,19 @@ def build_attention(architecture: str) -> Any:
             )
         ),
         "mla": MultiHeadLatentAttention,
+        "kda": KimiDeltaAttention,
+        "csa": lambda: CompressedSparseAttention(
+            MHAConfig(
+                architecture="csa",
+                routing_top_k=2,
+            )
+        ),
+        "hca": lambda: CompressedSparseAttention(
+            MHAConfig(
+                architecture="hca",
+                routing_top_k=3,
+            )
+        ),
     }
     factory = variants.get(architecture.lower())
     if factory is None:
@@ -125,6 +150,53 @@ def reset_sessions() -> None:
         _sessions.clear()
 
 
+def read_memory_slice(request: MemorySliceRequest) -> dict[str, Any]:
+    with _sessions_lock:
+        session = _sessions.get(request.session_id)
+        if session is None:
+            raise KeyError("Attention session was not found. Run prefill again.")
+        value = getattr(session.state, request.memory_id, None)
+        if not isinstance(value, np.ndarray):
+            raise KeyError(f"Memory tensor was not found: {request.memory_id}")
+        array = value.copy()
+
+    axes, growth_axis = infer_axes(array, request.memory_id)
+    if request.start < 0 or request.end <= request.start:
+        raise ValueError("Memory slice range must satisfy 0 <= start < end.")
+    if growth_axis is not None and request.start >= array.shape[growth_axis]:
+        raise ValueError("Memory slice start is outside the growth axis.")
+    if request.head is not None and "head" in axes:
+        head_axis = axes.index("head")
+        if request.head < 0 or request.head >= array.shape[head_axis]:
+            raise ValueError("Memory slice head is outside the head axis.")
+
+    sliced = slice_memory(
+        array,
+        axes,
+        growth_axis,
+        request.start,
+        request.end,
+        request.head,
+    )
+    return {
+        "id": request.memory_id,
+        "shape": list(sliced.shape),
+        "dtype": str(sliced.dtype),
+        "numel": int(sliced.size),
+        "bytes": int(sliced.nbytes),
+        "axes": list(axes),
+        "selection": {
+            "start": request.start,
+            "end": min(
+                request.end,
+                array.shape[growth_axis] if growth_axis is not None else 1,
+            ),
+            "head": request.head,
+        },
+        "values": json_values(sliced),
+    }
+
+
 @router.post("/run")
 def run(request: RunRequest) -> dict[str, Any]:
     try:
@@ -137,6 +209,16 @@ def run(request: RunRequest) -> dict[str, Any]:
 def decode(request: DecodeRequest) -> dict[str, Any]:
     try:
         return decode_attention(request.session_id, request.new_token)
+    except KeyError as error:
+        raise HTTPException(status_code=404, detail=error.args[0]) from error
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@router.post("/memory/slice")
+def memory_slice(request: MemorySliceRequest) -> dict[str, Any]:
+    try:
+        return read_memory_slice(request)
     except KeyError as error:
         raise HTTPException(status_code=404, detail=error.args[0]) from error
     except ValueError as error:

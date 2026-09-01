@@ -6,6 +6,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from app.architectures.mha import MHAConfig, MultiHeadAttention
+from app.memory import MemorySpec, MemoryTensorSpec
 from app.ops import PrimitiveExecutor
 
 
@@ -29,6 +30,20 @@ class LatentAttentionRun:
     def to_dict(self) -> dict[str, Any]:
         latent_cache = self.state.latent_cache
         appended_tokens = len(self.tokens) - self.previous_tokens
+        memory_spec = MemorySpec(
+            kind="attention_cache",
+            tensors=(
+                MemoryTensorSpec(
+                    id="latent_cache",
+                    name="KV Latent Cache",
+                    kind="latent_cache",
+                    role="latent",
+                    value=latent_cache,
+                    axes=("batch", "token", "latent"),
+                    growth_axis=1,
+                ),
+            ),
+        ).to_dict()
         return {
             "tokens": list(self.tokens),
             "phase": self.phase,
@@ -53,6 +68,7 @@ class LatentAttentionRun:
                 },
                 "total_elements": int(latent_cache.size),
                 "total_bytes": int(latent_cache.nbytes),
+                "spec": memory_spec,
             },
             "cache_activity": {
                 "phase": self.phase,

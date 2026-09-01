@@ -1,6 +1,7 @@
 import type {
   AttentionArchitecture,
   AttentionRun,
+  MemorySlice,
 } from "../types/attention";
 
 interface ErrorResponse {
@@ -53,4 +54,31 @@ export async function decodeOneToken(
   });
 
   return parseResponse(response);
+}
+
+export async function loadMemorySlice(
+  sessionId: string,
+  memoryId: string,
+  start: number,
+  end: number,
+  head?: number,
+): Promise<MemorySlice> {
+  const response = await fetch("/api/memory/slice", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      session_id: sessionId,
+      memory_id: memoryId,
+      start,
+      end,
+      head,
+    }),
+  });
+  if (!response.ok) {
+    const payload = (await response.json()) as ErrorResponse;
+    throw new Error(payload.detail || "Failed to load memory slice.");
+  }
+  return (await response.json()) as MemorySlice;
 }

@@ -315,6 +315,10 @@ main {
   border-radius: 0;
 }
 
+.graph-canvas .react-flow__pane {
+  cursor: default;
+}
+
 .loading-state,
 .empty-state {
   height: 100%;
@@ -999,6 +1003,282 @@ main {
   overflow: hidden;
 }
 
+.memory-view__toolbar {
+  min-height: 50px;
+  padding: 8px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: #f7f9fa;
+  border-bottom: 1px solid #dfe4e7;
+}
+
+.memory-kind {
+  color: #65737a;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+}
+
+.memory-overview__total {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border-bottom: 1px solid #dfe4e7;
+}
+
+.memory-overview__total > div {
+  min-height: 78px;
+  padding: 13px 16px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 4px 9px;
+  border-right: 1px solid #dfe4e7;
+}
+
+.memory-overview__total > div:last-child {
+  border-right: 0;
+}
+
+.memory-overview__total svg {
+  color: #087f8c;
+}
+
+.memory-overview__total span {
+  color: #758289;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.memory-overview__total strong {
+  grid-column: 2;
+  color: #27343a;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 18px;
+}
+
+.memory-overview__total small {
+  grid-column: 3;
+  grid-row: 2;
+  color: #a56819;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+}
+
+.memory-spec-list {
+  display: grid;
+}
+
+.memory-spec-row {
+  min-height: 62px;
+  padding: 10px 16px;
+  display: grid;
+  grid-template-columns: minmax(180px, 1.4fr) minmax(130px, 1fr) repeat(4, auto);
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid #e4e8ea;
+}
+
+.memory-spec-row:last-child {
+  border-bottom: 0;
+}
+
+.memory-spec-row__identity {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.memory-spec-row__identity svg {
+  flex: 0 0 auto;
+  color: #087f8c;
+}
+
+.memory-spec-row__identity div {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.memory-spec-row__identity strong {
+  color: #344148;
+  font-size: 12px;
+}
+
+.memory-spec-row__identity span,
+.memory-spec-row > span {
+  color: #718087;
+  font-size: 10px;
+}
+
+.memory-spec-row code {
+  color: #405058;
+  font-size: 10px;
+}
+
+.memory-block-view,
+.memory-slice-view {
+  min-height: 214px;
+  border-bottom: 1px solid #dfe4e7;
+}
+
+.memory-block-header {
+  min-height: 52px;
+  padding: 8px 14px;
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+  background: #fbfcfc;
+  border-bottom: 1px solid #e4e8ea;
+}
+
+.memory-block-header label,
+.memory-slice-controls label {
+  display: grid;
+  gap: 4px;
+}
+
+.memory-block-header label > span,
+.memory-slice-controls label > span {
+  color: #758289;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.memory-block-header select,
+.memory-slice-controls select,
+.memory-slice-controls input {
+  height: 31px;
+  padding: 0 8px;
+  color: #344148;
+  background: #ffffff;
+  border: 1px solid #cbd3d7;
+  border-radius: 3px;
+  font-size: 10px;
+}
+
+.memory-block-header > span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #718087;
+  font-size: 10px;
+}
+
+.memory-block-grid {
+  padding: 14px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  gap: 6px;
+}
+
+.memory-block {
+  min-height: 62px;
+  padding: 8px;
+  display: grid;
+  gap: 3px;
+  color: #24555b;
+  background: #d7f0f2;
+  border: 1px solid #8ec6cb;
+  border-radius: 3px;
+}
+
+.memory-block span,
+.memory-block small {
+  font-size: 9px;
+}
+
+.memory-block strong {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+}
+
+.memory-slice-controls {
+  padding: 10px 14px;
+  display: grid;
+  grid-template-columns: minmax(160px, 1fr) repeat(3, minmax(80px, 0.35fr)) auto;
+  align-items: end;
+  gap: 9px;
+  background: #fbfcfc;
+  border-bottom: 1px solid #e4e8ea;
+}
+
+.memory-load-button {
+  min-height: 31px;
+  padding: 0 11px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: #ffffff;
+  background: #087f8c;
+  border: 1px solid #076d77;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.memory-slice-result {
+  padding: 12px 14px;
+}
+
+.memory-slice-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  color: #6d7b82;
+  font-size: 10px;
+}
+
+.memory-slice-meta strong {
+  color: #344148;
+}
+
+.memory-slice-result pre {
+  max-height: 220px;
+  margin: 9px 0 0;
+  padding: 10px;
+  overflow: auto;
+  color: #dce7eb;
+  background: #202a30;
+  border-radius: 3px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.memory-empty,
+.memory-error {
+  min-height: 78px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #718087;
+  font-size: 11px;
+}
+
+.memory-error {
+  color: #9a3e36;
+}
+
+.memory-view .cache-activity {
+  grid-template-columns: repeat(3, minmax(150px, 1fr));
+}
+
+.tensor-values-omitted > div {
+  display: grid;
+  gap: 7px;
+  text-align: center;
+}
+
+.tensor-values-omitted code {
+  color: #405058;
+}
+
 .cache-phase {
   display: flex;
   align-items: center;
@@ -1293,6 +1573,18 @@ main {
   .detail-grid {
     grid-template-columns: 1fr;
   }
+
+  .memory-spec-row {
+    grid-template-columns: minmax(180px, 1fr) repeat(2, auto);
+  }
+
+  .memory-spec-row > span:nth-last-child(-n + 2) {
+    display: none;
+  }
+
+  .memory-slice-controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 560px) {
@@ -1336,6 +1628,26 @@ main {
 
   .tensor-meta > svg {
     display: none;
+  }
+
+  .memory-view__toolbar,
+  .memory-block-header,
+  .cache-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .memory-overview__total,
+  .memory-spec-row,
+  .memory-slice-controls,
+  .memory-view .cache-activity {
+    grid-template-columns: 1fr;
+  }
+
+  .memory-overview__total > div,
+  .memory-spec-row {
+    border-right: 0;
+    border-bottom: 1px solid #e1e5e7;
   }
 
   .definition {

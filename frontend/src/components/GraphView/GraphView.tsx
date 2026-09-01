@@ -4,6 +4,7 @@ import {
   BackgroundVariant,
   Controls,
   MiniMap,
+  PanOnScrollMode,
   ReactFlow,
   type Edge,
   type Node,
@@ -80,6 +81,12 @@ export function GraphView({
         nodesDraggable={false}
         nodesConnectable={false}
         elementsSelectable
+        panOnDrag={false}
+        panOnScroll
+        panOnScrollMode={PanOnScrollMode.Free}
+        zoomOnScroll={false}
+        zoomOnPinch
+        zoomOnDoubleClick={false}
         minZoom={0.2}
         maxZoom={1.8}
         defaultViewport={{ x: 0, y: 0, zoom: 0.82 }}
