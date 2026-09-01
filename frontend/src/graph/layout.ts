@@ -2,17 +2,26 @@ import type { Edge, Node } from "@xyflow/react";
 
 import type { GraphNodeData } from "./adapter";
 
-const elkPromise = import("elkjs/lib/elk.bundled.js").then(
-  ({ default: ELK }) => new ELK(),
-);
 const NODE_WIDTH = 184;
 const NODE_HEIGHT = 78;
+let elkPromise: ReturnType<typeof createElk> | undefined;
+
+function createElk() {
+  return import("elkjs/lib/elk.bundled.js").then(
+    ({ default: ELK }) => new ELK(),
+  );
+}
+
+function getElk() {
+  elkPromise ??= createElk();
+  return elkPromise;
+}
 
 export async function layoutGraph(
   nodes: Node<GraphNodeData>[],
   edges: Edge[],
 ): Promise<{ nodes: Node<GraphNodeData>[]; edges: Edge[] }> {
-  const elk = await elkPromise;
+  const elk = await getElk();
   const layout = await elk.layout({
     id: "attn-graph",
     layoutOptions: {

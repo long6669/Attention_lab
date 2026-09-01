@@ -73,6 +73,8 @@ graph:
 
 - Persistent memory and bytes added per token.
 - Constant versus linear memory growth.
+- Synchronized one-token decode across every selected architecture.
+- Memory growth projections from 1 to 11 tokens.
 - Graph nodes and trace steps.
 - Shape-based FLOP estimates, clearly labeled as estimates.
 
@@ -136,7 +138,9 @@ Open <http://127.0.0.1:8000>.
 
 `render.yaml` and `railway.json` are included for managed deployments. Public
 instances are educational demos: sessions are in memory and the service is not
-designed for untrusted private data.
+designed for untrusted private data. Sessions use a 30-minute idle TTL, LRU
+eviction, and independent locks so unrelated decode requests do not block one
+another.
 
 ## How it works
 
@@ -173,10 +177,13 @@ frontend/src/
 ```bash
 make lint
 make test
+make test-e2e
 ```
 
 The CI workflow tests Python 3.9 and 3.12, checks Python and TypeScript style,
-builds the frontend, and verifies the production Docker image.
+builds the frontend, runs the Chromium end-to-end suite, and verifies the
+production Docker image. The E2E suite covers shared comparison URLs,
+synchronized decode, CSA trace completion, and mobile overflow.
 
 ## Project scope
 
@@ -192,13 +199,14 @@ named and documented as approximations rather than paper-faithful replicas.
 
 ## Roadmap
 
-- More reference parity tests.
+- Cross-framework parity against PyTorch reference implementations.
 - Custom attention graphs after the core comparison workflow is stable.
 
 ## Contributing
 
 Read [CONTRIBUTING.md](CONTRIBUTING.md) before proposing a new architecture.
-Bug reports and focused pull requests are welcome.
+Bug reports and focused pull requests are welcome. Release-facing changes are
+tracked in [CHANGELOG.md](CHANGELOG.md).
 
 ## License
 

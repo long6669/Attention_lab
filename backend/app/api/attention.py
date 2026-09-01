@@ -1,5 +1,7 @@
-from dataclasses import dataclass
+from collections import OrderedDict
+from dataclasses import dataclass, field
 from threading import Lock
+from time import monotonic
 from typing import Any, Optional
 from uuid import uuid4
 
@@ -20,6 +22,7 @@ from app.metrics import build_execution_metrics
 MAX_INPUT_TOKENS = 10
 MAX_DECODED_TOKENS = 11
 MAX_SESSIONS = 256
+SESSION_TTL_SECONDS = 30 * 60
 
 router = APIRouter(prefix="/api", tags=["attention"])
 
@@ -46,9 +49,11 @@ class MemorySliceRequest(BaseModel):
 class AttentionSession:
     attention: Any
     state: Any
+    last_access: float = field(default_factory=monotonic)
+    lock: Lock = field(default_factory=Lock)
 
 
-_sessions: dict[str, AttentionSession] = {}
+_sessions: OrderedDict[str, AttentionSession] = OrderedDict()
 _sessions_lock = Lock()
 
 
@@ -110,9 +115,9 @@ def run_attention(text: str, architecture: str = "mha") -> dict[str, Any]:
     result = attention.prefill(tokens)
     session_id = uuid4().hex
     with _sessions_lock:
+        _prune_expired_sessions()
         if len(_sessions) >= MAX_SESSIONS:
-            oldest_session_id = next(iter(_sessions))
-            del _sessions[oldest_session_id]
+            _sessions.popitem(last=False)
         _sessions[session_id] = AttentionSession(attention, result.state)
 
     payload = result.to_dict()
@@ -126,10 +131,8 @@ def decode_attention(
     session_id: str,
     new_token: Optional[str] = None,
 ) -> dict[str, Any]:
-    with _sessions_lock:
-        session = _sessions.get(session_id)
-        if session is None:
-            raise KeyError("Attention session was not found. Run prefill again.")
+    session = _get_session(session_id)
+    with session.lock:
         if len(session.state.tokens) >= MAX_DECODED_TOKENS:
             raise ValueError("MVP decode supports up to 11 total tokens.")
 
@@ -143,6 +146,7 @@ def decode_attention(
 
         result = session.attention.decode(session.state, decoded_token)
         session.state = result.state
+        session.last_access = monotonic()
 
     payload = result.to_dict()
     payload["session_id"] = session_id
@@ -152,20 +156,41 @@ def decode_attention(
     return payload
 
 
+def _get_session(session_id: str) -> AttentionSession:
+    with _sessions_lock:
+        _prune_expired_sessions()
+        session = _sessions.get(session_id)
+        if session is None:
+            raise KeyError("Attention session was not found. Run prefill again.")
+        session.last_access = monotonic()
+        _sessions.move_to_end(session_id)
+        return session
+
+
+def _prune_expired_sessions(now: Optional[float] = None) -> None:
+    current_time = monotonic() if now is None else now
+    expired = [
+        session_id
+        for session_id, session in _sessions.items()
+        if current_time - session.last_access >= SESSION_TTL_SECONDS
+    ]
+    for session_id in expired:
+        del _sessions[session_id]
+
+
 def reset_sessions() -> None:
     with _sessions_lock:
         _sessions.clear()
 
 
 def read_memory_slice(request: MemorySliceRequest) -> dict[str, Any]:
-    with _sessions_lock:
-        session = _sessions.get(request.session_id)
-        if session is None:
-            raise KeyError("Attention session was not found. Run prefill again.")
+    session = _get_session(request.session_id)
+    with session.lock:
         value = getattr(session.state, request.memory_id, None)
         if not isinstance(value, np.ndarray):
             raise KeyError(f"Memory tensor was not found: {request.memory_id}")
         array = value.copy()
+        session.last_access = monotonic()
 
     axes, growth_axis = infer_axes(array, request.memory_id)
     if request.start < 0 or request.end <= request.start:

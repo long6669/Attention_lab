@@ -252,6 +252,31 @@ export default function App() {
     }
   }
 
+  async function handleCompareDecode() {
+    if (
+      comparisonResults.length === 0 ||
+      comparisonResults.some((item) => item.tokens.length >= 11)
+    ) {
+      return;
+    }
+    setIsComparing(true);
+    setError(undefined);
+    try {
+      const payloads = await Promise.all(
+        comparisonResults.map((item) => decodeOneToken(item.session_id)),
+      );
+      setComparisonResults(payloads);
+    } catch (decodeError) {
+      setError(
+        decodeError instanceof Error
+          ? decodeError.message
+          : "Failed to decode comparison.",
+      );
+    } finally {
+      setIsComparing(false);
+    }
+  }
+
   return (
     <div className="app-shell">
       <header className="app-header">
@@ -388,6 +413,11 @@ export default function App() {
               <CompareView
                 results={comparisonResults}
                 onOpen={openArchitecture}
+                isDecoding={isComparing}
+                canDecode={comparisonResults.every(
+                  (item) => item.tokens.length < 11,
+                )}
+                onDecode={() => void handleCompareDecode()}
               />
             )}
             {comparisonResults.length > 0 ? (

@@ -1,4 +1,4 @@
-.PHONY: setup dev backend frontend test lint format build
+.PHONY: setup dev backend frontend test test-e2e lint format build
 
 setup:
 	python3 -m venv .venv
@@ -17,6 +17,9 @@ frontend:
 test:
 	PYTHONPATH=backend .venv/bin/python -m unittest discover -s backend/tests
 	cd frontend && npm run build
+
+test-e2e:
+	cd frontend && PATH="$(CURDIR)/.venv/bin:$$PATH" npm run test:e2e
 
 lint:
 	.venv/bin/ruff check backend
