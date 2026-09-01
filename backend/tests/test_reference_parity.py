@@ -3,6 +3,8 @@ import unittest
 
 import numpy as np
 from app.architectures import (
+    CompressedSparseAttention,
+    KimiDeltaAttention,
     MHAConfig,
     MultiHeadAttention,
     MultiHeadLatentAttention,
@@ -83,6 +85,51 @@ class ReferenceParityTest(unittest.TestCase):
             np.matmul(latent, v_weight),
             atol=1e-6,
         )
+
+    def test_decode_matches_last_token_of_full_prefill_for_every_path(self) -> None:
+        architectures = {
+            "mha": MultiHeadAttention(),
+            "mqa": MultiHeadAttention(
+                MHAConfig(
+                    architecture="mqa",
+                    num_q_heads=2,
+                    num_kv_heads=1,
+                )
+            ),
+            "gqa": MultiHeadAttention(
+                MHAConfig(
+                    architecture="gqa",
+                    num_q_heads=4,
+                    num_kv_heads=2,
+                )
+            ),
+            "rope": MultiHeadAttention(MHAConfig(architecture="rope", use_rope=True)),
+            "mla": MultiHeadLatentAttention(),
+            "kda": KimiDeltaAttention(),
+            "csa": CompressedSparseAttention(
+                MHAConfig(architecture="csa", routing_top_k=2)
+            ),
+            "hca": CompressedSparseAttention(
+                MHAConfig(architecture="hca", routing_top_k=3)
+            ),
+        }
+
+        for name, attention in architectures.items():
+            with self.subTest(architecture=name):
+                prefill = attention.prefill(["one", "two", "three"])
+                decode_output = attention.decode(
+                    prefill.state,
+                    "four",
+                ).executor.value("output")
+                full_output = attention.prefill(
+                    ["one", "two", "three", "four"]
+                ).executor.value("output")[:, -1:, :]
+
+                np.testing.assert_allclose(
+                    decode_output,
+                    full_output,
+                    atol=1e-6,
+                )
 
 
 if __name__ == "__main__":

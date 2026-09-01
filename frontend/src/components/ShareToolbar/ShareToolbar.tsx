@@ -1,5 +1,4 @@
 import { Check, Copy, FileJson, ImageDown, ListTree } from "lucide-react";
-import { toPng } from "html-to-image";
 import { useEffect, useState } from "react";
 
 import type { AttentionRun } from "../../types/attention";
@@ -57,6 +56,7 @@ export function ShareToolbar({
     }
     setExportingImage(true);
     try {
+      const { toPng } = await import("html-to-image");
       const dataUrl = await toPng(target, {
         backgroundColor: "#eef1f2",
         pixelRatio: 2,

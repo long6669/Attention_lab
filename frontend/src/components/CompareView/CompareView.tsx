@@ -1,4 +1,11 @@
-import { ArrowUpRight, Database, GitCompareArrows, Sigma } from "lucide-react";
+import {
+  ArrowUpRight,
+  Database,
+  GitCompareArrows,
+  LoaderCircle,
+  Sigma,
+  StepForward,
+} from "lucide-react";
 
 import {
   ARCHITECTURE_LABELS,
@@ -12,6 +19,9 @@ import type {
 interface CompareViewProps {
   results: AttentionRun[];
   onOpen: (architecture: AttentionArchitecture) => void;
+  isDecoding: boolean;
+  canDecode: boolean;
+  onDecode: () => void;
 }
 
 function formatBytes(bytes: number): string {
@@ -36,7 +46,13 @@ function delta(value: number, baseline: number): string {
   return `${percent > 0 ? "+" : ""}${percent.toFixed(0)}% vs first`;
 }
 
-export function CompareView({ results, onOpen }: CompareViewProps) {
+export function CompareView({
+  results,
+  onOpen,
+  isDecoding,
+  canDecode,
+  onDecode,
+}: CompareViewProps) {
   if (results.length === 0) {
     return null;
   }
@@ -45,6 +61,13 @@ export function CompareView({ results, onOpen }: CompareViewProps) {
     ...results.map((result) => result.memory.total_bytes),
     1,
   );
+  const maxProjectedMemory = Math.max(
+    ...results.map((result) => projectMemory(result, 11)),
+    1,
+  );
+  const phase = results.every((result) => result.phase === "decode")
+    ? "decode"
+    : "prefill";
 
   return (
     <section className="compare-view" id="comparison-view">
@@ -53,10 +76,26 @@ export function CompareView({ results, onOpen }: CompareViewProps) {
           <span className="eyebrow">SIDE-BY-SIDE EXECUTION</span>
           <h2>Architecture Compare</h2>
         </div>
-        <span className="estimate-note">
-          <Sigma size={14} />
-          FLOPs are shape-based estimates
-        </span>
+        <div className="compare-view__actions">
+          <span className={`phase-badge phase-badge--${phase}`}>{phase}</span>
+          <span className="estimate-note">
+            <Sigma size={14} />
+            FLOPs are shape-based estimates
+          </span>
+          <button
+            type="button"
+            className="compare-decode-button"
+            disabled={isDecoding || !canDecode}
+            onClick={onDecode}
+          >
+            {isDecoding ? (
+              <LoaderCircle className="spin" size={15} />
+            ) : (
+              <StepForward size={15} />
+            )}
+            Decode all
+          </button>
+        </div>
       </div>
 
       <div
@@ -138,6 +177,11 @@ export function CompareView({ results, onOpen }: CompareViewProps) {
                 </div>
               </div>
 
+              <MemoryGrowthChart
+                result={result}
+                maxBytes={maxProjectedMemory}
+              />
+
               <div className="compare-graph">
                 <div>
                   <GitCompareArrows size={13} />
@@ -159,5 +203,46 @@ export function CompareView({ results, onOpen }: CompareViewProps) {
         })}
       </div>
     </section>
+  );
+}
+
+function projectMemory(result: AttentionRun, tokens: number): number {
+  return result.metrics.memory_growth === "constant"
+    ? result.memory.total_bytes
+    : result.metrics.memory_bytes_per_token * tokens;
+}
+
+function MemoryGrowthChart({
+  result,
+  maxBytes,
+}: {
+  result: AttentionRun;
+  maxBytes: number;
+}) {
+  const currentTokens = result.tokens.length;
+  const positions = Array.from(new Set([1, currentTokens, 11])).sort(
+    (left, right) => left - right,
+  );
+
+  return (
+    <div className="memory-growth-chart">
+      <div className="memory-growth-chart__title">
+        <span>Memory by sequence length</span>
+        <small>1–11 tokens</small>
+      </div>
+      <div className="memory-growth-chart__plot">
+        {positions.map((tokens) => {
+          const bytes = projectMemory(result, tokens);
+          const height = Math.max(8, (bytes / maxBytes) * 100);
+          return (
+            <div className="memory-growth-chart__point" key={tokens}>
+              <small>{formatBytes(bytes)}</small>
+              <span style={{ height: `${height}%` }} />
+              <b>{tokens}</b>
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }

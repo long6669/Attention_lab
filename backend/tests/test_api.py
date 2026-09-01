@@ -1,5 +1,7 @@
 import unittest
+from unittest.mock import patch
 
+from app.api import attention as attention_api
 from app.api.attention import reset_sessions
 from app.main import app
 from fastapi.testclient import TestClient
@@ -253,6 +255,50 @@ class AttentionApiTest(unittest.TestCase):
             response.json()["detail"],
             "Attention session was not found. Run prefill again.",
         )
+
+    def test_expired_session_is_removed_on_access(self) -> None:
+        prefill = self.client.post(
+            "/api/run",
+            json={"text": "one two three"},
+        ).json()
+        session = attention_api._sessions[prefill["session_id"]]
+        session.last_access -= attention_api.SESSION_TTL_SECONDS
+
+        response = self.client.post(
+            "/api/decode",
+            json={"session_id": prefill["session_id"]},
+        )
+
+        self.assertEqual(response.status_code, 404)
+        self.assertNotIn(prefill["session_id"], attention_api._sessions)
+
+    def test_session_capacity_evicts_least_recently_used(self) -> None:
+        with patch.object(attention_api, "MAX_SESSIONS", 2):
+            first = self.client.post(
+                "/api/run",
+                json={"text": "first"},
+            ).json()
+            second = self.client.post(
+                "/api/run",
+                json={"text": "second"},
+            ).json()
+            self.client.post(
+                "/api/memory/slice",
+                json={
+                    "session_id": first["session_id"],
+                    "memory_id": "k_cache",
+                    "start": 0,
+                    "end": 1,
+                },
+            )
+            third = self.client.post(
+                "/api/run",
+                json={"text": "third"},
+            ).json()
+
+        self.assertIn(first["session_id"], attention_api._sessions)
+        self.assertNotIn(second["session_id"], attention_api._sessions)
+        self.assertIn(third["session_id"], attention_api._sessions)
 
     def test_decode_session_persists_cache_across_requests(self) -> None:
         prefill = self.client.post(
